@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+
+<head>
+  <title>This is the title of the webpage!</title>
+</head>
+
+<body>
+  <p>This is an example paragraph. Anything in the <strong>body</strong> tag will appear on the page, just like this
+    <strong>p</strong> tag and its contents.</p>
+</body>
+<button onclick="document.doAuth()">Do auth</button>
+<script>
+  document.doAuth = () => {
+    debugger
+    // http://localhost:8020/api/auth?response_type=code&client_id=LocalClient
+    // POST: http://localhost:8020/api/auth?response_type=code&client_id=LocalClient&redirect_uri=http%3A%2F%2Flocalhost%3A8021%2Fendpooint&allow=true
+    // ^^ "http://localhost:8021/endpooint"
+
+    fetch('/api/auth?response_type=code&client_id=LocalClient')
+      .then(response => response.json()).then((preAuth) => {
+        console.log(preAuth)
+        return fetch(
+          "/api/auth?response_type=code&client_id=LocalClient&redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Fapi%2Fuser&allow=true",
+          {
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            method: "POST",
+            // body: JSON.stringify({ a: 1, b: 2 })
+          })
+      }).then((res) => {
+        debugger
+        console.log(res)
+        return fetch("/api/auth/token?grant_type=client_credentials", {
+          method: "POST"
+        })
+      }).then((res) => res.text()),then((text) => {
+        console.log(text)
+      })
+  }
+</script>
+
+</html>

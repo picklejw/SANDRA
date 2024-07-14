@@ -16,3 +16,12 @@ xsd-types = { git = "https://github.com/lumeohq/xsd-parser-rs", rev = "7f3d433" 
 schema = { git = "https://github.com/jwolfgram/onvif-rs", branch = "fix-reolink-header-event", default-features = false, features = ["analytics", "devicemgmt", "event", "media", "ptz"] }
 b_2 = {git = "https://github.com/jwolfgram/onvif-rs", branch = "fix-reolink-header-event" }
 url = "2.5.2"
+actix-web = "4"
+actix-files = "0.6.6"
+actix = "0.13.5"
+serde = "1.0.204"
+serde_json = "1.0.120"
+actix-web-lab = "0.20.2"
+actix-jwt-auth-middleware = "0.5.0"
+ed25519-compact = "2.1.1"
+jwt-compact = { version = "0.8.0", features = ["ed25519-compact"]}
