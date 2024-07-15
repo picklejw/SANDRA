@@ -4,8 +4,10 @@ use actix_web::{
     web::{self, Data},
     App, HttpServer,
 };
-use utils::http_service::{build_auth_routes, build_user_routes, User};
+use utils::http_service::{build_auth_routes, build_user_routes};
+use utils::models::User;
 use utils::sub_events::{subscribe, Source};
+use utils::db_service::{DBService};
 mod utils;
 
 use actix_jwt_auth_middleware::use_jwt::UseJWTOnApp;
@@ -31,7 +33,12 @@ async fn main() -> std::io::Result<()> {
     // }
     // sub_events::subscribe(feed, read_events).await;
 
-    HttpServer::new(|| {
+
+
+    let db = DBService::init().await;
+
+
+    HttpServer::new(move || {
         let KeyPair {
             pk: public_key,
             sk: secret_key,
@@ -54,9 +61,17 @@ async fn main() -> std::io::Result<()> {
 
         let user_scope = build_user_routes();
 
+        // let mongo = get_mongo();
+        // mongo.connect();
+        // let app_state = AppState{
+        //   mongo_srv: *mongo
+        // };
+        let db_data = Data::new(db.clone());
+
         App::new()
             .wrap(NormalizePath::new(TrailingSlash::Trim))
             .wrap(Logger::default())
+            .app_data(db_data)
             .service(auth_scope)
             .use_jwt(authority, user_scope)
             // .default_service(fs::Files::new("/", "../sandra-fe/dist"  ).index_file("index.html"))
