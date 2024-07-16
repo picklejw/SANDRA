@@ -6,11 +6,10 @@ use std::fmt;
 
 #[derive(Serialize, Deserialize, Debug, Clone, FromRequest)]
 pub struct User {
-    pub username: String,
-    pub password: String,
-    pub id: ObjectId,
-    pub gid: ObjectId,
-    pub access_level: AccessLevel,
+    pub username: Option<String>,
+    pub password: Option<String>,
+    pub gid: Option<ObjectId>,
+    pub access_level: Option<AccessLevel>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

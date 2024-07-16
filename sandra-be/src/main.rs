@@ -1,85 +1,78 @@
 use actix_files as fs;
 use actix_web::{
-    middleware::{Logger, NormalizePath, TrailingSlash},
-    web::{self, Data},
-    App, HttpServer,
+  middleware::{ Logger, NormalizePath, TrailingSlash },
+  web::{ self, Data },
+  App,
+  HttpServer,
 };
-use utils::http_service::{build_auth_routes, build_user_routes};
+use utils::http_service::{ build_auth_routes, build_user_routes };
 use utils::models::User;
-use utils::sub_events::{subscribe, Source};
-use utils::db_service::{DBService};
+use utils::sub_events::{ subscribe, Source };
+use utils::db_service::{ DBService };
 mod utils;
 
 use actix_jwt_auth_middleware::use_jwt::UseJWTOnApp;
-use actix_jwt_auth_middleware::{Authority, TokenSigner};
+use actix_jwt_auth_middleware::{ Authority, TokenSigner };
 
 use ed25519_compact::KeyPair;
 use jwt_compact::alg::Ed25519;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // let feed = Source {
-    //     src_ip: "admin",
-    //     username: "admin",
-    //     password: "password2011",
-    //     ..Default::default()
+  // let feed = Source {
+  //     src_ip: "admin",
+  //     username: "admin",
+  //     password: "password2011",
+  //     ..Default::default()
+  // };
+  // fn read_events (ev: &NotificationMessageHolderType) {
+  //   println!("ev!!");
+  //   println!("{}", ev.topic.inner_text);
+  //   let ev_attib = ev.message.msg.data.simple_item.iter().next().unwrap();
+  //   println!("{:?}", ev_attib.name);
+  //   println!("{:?}", ev_attib.value);
+  // }
+  // sub_events::subscribe(feed, read_events).await;
+
+  let db = DBService::init().await;
+
+  HttpServer::new(move || {
+    let KeyPair { pk: public_key, sk: secret_key } = KeyPair::generate();
+
+    let authority = Authority::<User, Ed25519, _, _>
+      ::new()
+      .refresh_authorizer(|| async move { Ok(()) })
+      .token_signer(
+        Some(
+          TokenSigner::new().signing_key(secret_key.clone()).algorithm(Ed25519).build().expect("")
+        )
+      )
+      .verifying_key(public_key)
+      .build()
+      .expect("");
+
+    let auth_scope = build_auth_routes();
+
+    let user_scope = build_user_routes();
+
+    // let mongo = get_mongo();
+    // mongo.connect();
+    // let app_state = AppState{
+    //   mongo_srv: *mongo
     // };
-    // fn read_events (ev: &NotificationMessageHolderType) {
-    //   println!("ev!!");
-    //   println!("{}", ev.topic.inner_text);
-    //   let ev_attib = ev.message.msg.data.simple_item.iter().next().unwrap();
-    //   println!("{:?}", ev_attib.name);
-    //   println!("{:?}", ev_attib.value);
-    // }
-    // sub_events::subscribe(feed, read_events).await;
+    let db_data = Data::new(db.clone());
 
-
-
-    let db = DBService::init().await;
-
-
-    HttpServer::new(move || {
-        let KeyPair {
-            pk: public_key,
-            sk: secret_key,
-        } = KeyPair::generate();
-
-        let authority = Authority::<User, Ed25519, _, _>::new()
-            .refresh_authorizer(|| async move { Ok(()) })
-            .token_signer(Some(
-                TokenSigner::new()
-                    .signing_key(secret_key.clone())
-                    .algorithm(Ed25519)
-                    .build()
-                    .expect(""),
-            ))
-            .verifying_key(public_key)
-            .build()
-            .expect("");
-
-        let auth_scope = build_auth_routes();
-
-        let user_scope = build_user_routes();
-
-        // let mongo = get_mongo();
-        // mongo.connect();
-        // let app_state = AppState{
-        //   mongo_srv: *mongo
-        // };
-        let db_data = Data::new(db.clone());
-
-        App::new()
-            .wrap(NormalizePath::new(TrailingSlash::Trim))
-            .wrap(Logger::default())
-            .app_data(db_data)
-            .service(auth_scope)
-            .use_jwt(authority, user_scope)
-            // .default_service(fs::Files::new("/", "../sandra-fe/dist"  ).index_file("index.html"))
-            .default_service(fs::Files::new("/", "./TEMP_TEST").index_file("index.html"))
-    })
+    App::new()
+      .wrap(NormalizePath::new(TrailingSlash::Trim))
+      .wrap(Logger::default())
+      .app_data(db_data)
+      .service(auth_scope)
+      .use_jwt(authority, user_scope)
+      // .default_service(fs::Files::new("/", "../sandra-fe/dist"  ).index_file("index.html"))
+      .default_service(fs::Files::new("/", "./TEMP_TEST").index_file("index.html"))
+  })
     .bind(("127.0.0.1", 8080))?
-    .run()
-    .await
+    .run().await
 }
 
 // have auto discovery for cameras on network.
