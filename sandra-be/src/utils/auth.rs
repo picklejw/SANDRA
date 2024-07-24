@@ -91,7 +91,8 @@ impl AuthState {
     }
   }
 
-  // TODO: Missing way to handle expired access_tokens being used after new access_token is issued.
+  // TODO: this validate auth is not very efficiant for many reads to write ratio. Need to break out validate auth and pub fn() for setting new tokens
+  // for safely writing to this state we use RwLock, but we always call .write() when we are checking for tokens but not always updating tokens
   pub fn validate_auth(&mut self, current_request: &ServiceRequest) -> Result<Tokens, String> {
     println!("{}", "New auth ~~~~~");
     if let Some(req_a_cookie) = current_request.cookie("access_token") {
