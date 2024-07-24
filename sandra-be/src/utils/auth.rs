@@ -135,9 +135,10 @@ impl AuthState {
           }
         } else {
           // access_token found and is good
+
           Ok(Tokens {
-            access_token: Some(req_a_token.to_string()),
-            refresh_token: Some(req_r_token.to_string()),
+            access_token: None,
+            refresh_token: None,
           })
         }
       } else {
