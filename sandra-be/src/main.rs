@@ -1,21 +1,17 @@
-use actix_files as fs;
 use actix_web::{
   middleware::{ Logger, NormalizePath, TrailingSlash },
-  web::{ self, Data },
+  web::Data,
+  http::header,
   App,
   HttpServer,
 };
+use actix_files as fs;
+use actix_cors::Cors;
 use utils::http_service::{ build_auth_routes, build_user_routes };
-use utils::models::User;
-use utils::sub_events::{ subscribe, Source };
-use utils::db_service::{ DBService };
+use utils::db_service::DBService;
+use utils::auth::jwt_middleware;
 mod utils;
-
-use actix_jwt_auth_middleware::use_jwt::UseJWTOnApp;
-use actix_jwt_auth_middleware::{ Authority, TokenSigner };
-
-use ed25519_compact::KeyPair;
-use jwt_compact::alg::Ed25519;
+use actix_web_lab::middleware::from_fn;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -37,39 +33,28 @@ async fn main() -> std::io::Result<()> {
   let db = DBService::init().await;
 
   HttpServer::new(move || {
-    let KeyPair { pk: public_key, sk: secret_key } = KeyPair::generate();
+    let auth = from_fn(jwt_middleware);
 
-    let authority = Authority::<User, Ed25519, _, _>
-      ::new()
-      .refresh_authorizer(|| async move { Ok(()) })
-      .token_signer(
-        Some(
-          TokenSigner::new().signing_key(secret_key.clone()).algorithm(Ed25519).build().expect("")
-        )
-      )
-      .verifying_key(public_key)
-      .build()
-      .expect("");
+    let cors_opts = Cors::default()
+      .allowed_origin_fn(|origin, _req_head| { origin.as_bytes().starts_with(b"http://localhost") })
+      .allowed_methods(vec!["GET", "POST"])
+      .allowed_headers(&[header::AUTHORIZATION, header::ACCEPT])
+      .allowed_header(header::CONTENT_TYPE)
+      .expose_headers(&[header::CONTENT_DISPOSITION]);
 
     let auth_scope = build_auth_routes();
-
     let user_scope = build_user_routes();
-
-    // let mongo = get_mongo();
-    // mongo.connect();
-    // let app_state = AppState{
-    //   mongo_srv: *mongo
-    // };
     let db_data = Data::new(db.clone());
 
     App::new()
       .wrap(NormalizePath::new(TrailingSlash::Trim))
       .wrap(Logger::default())
+      .wrap(cors_opts)
       .app_data(db_data)
+      .default_service(fs::Files::new("/", "../sandra-fe/dist").index_file("index.html"))
       .service(auth_scope)
-      .use_jwt(authority, user_scope)
-      // .default_service(fs::Files::new("/", "../sandra-fe/dist"  ).index_file("index.html"))
-      .default_service(fs::Files::new("/", "./TEMP_TEST").index_file("index.html"))
+      .service(user_scope.wrap(auth)) // remove me
+    // .default_service(fs::Files::new("/", "./TEMP_TEST").index_file("index.html"))
   })
     .bind(("127.0.0.1", 8080))?
     .run().await
