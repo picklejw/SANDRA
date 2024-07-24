@@ -94,7 +94,6 @@ impl AuthState {
   // TODO: this validate auth is not very efficiant for many reads to write ratio. Need to break out validate auth and pub fn() for setting new tokens
   // for safely writing to this state we use RwLock, but we always call .write() when we are checking for tokens but not always updating tokens
   pub fn validate_auth(&mut self, current_request: &ServiceRequest) -> Result<Tokens, String> {
-    println!("{}", "New auth ~~~~~");
     if let Some(req_a_cookie) = current_request.cookie("access_token") {
       let req_a_token = req_a_cookie.value();
       let req_r_cookie = current_request
@@ -104,8 +103,6 @@ impl AuthState {
       let a_parsed = AuthState::parse_token(req_a_token);
 
       if let Some(uid_dat) = self.valid_tokens.get_mut(&a_parsed.uid) {
-        println!("{}", "106");
-
         let current_time = SystemTime::now()
           .duration_since(UNIX_EPOCH)
           .unwrap()
@@ -204,34 +201,36 @@ pub async fn jwt_middleware<T>(
     Ok(mut mut_auth_state) => {
       match mut_auth_state.validate_auth(&req) {
         Ok(cookies) => {
-          let at_cookie = CookieBuilder::new(
-            "access_token",
-            cookies.access_token.expect("Could not set access token to cookie")
-          )
-            .path("/")
-            .http_only(true)
-            .finish();
-          let rt_cookie = CookieBuilder::new(
-            "refresh_token",
-            cookies.refresh_token.expect("Could not set refresh token to cookie")
-          )
-            .path("/")
-            .http_only(true)
-            .finish();
           let mut res = next.call(req).await?;
-          let res_mut = res.response_mut();
-          res_mut.add_cookie(&at_cookie).expect("Could not add cookie: at");
-          res_mut.add_cookie(&rt_cookie).expect("Could not add cookie: rt");
+
+          if cookies.access_token != None {
+            let at_cookie = CookieBuilder::new(
+              "access_token",
+              cookies.access_token.expect("Could not set access token to cookie")
+            )
+              .path("/")
+              .http_only(true)
+              .finish();
+            let rt_cookie = CookieBuilder::new(
+              "refresh_token",
+              cookies.refresh_token.expect("Could not set refresh token to cookie")
+            )
+              .path("/")
+              .http_only(true)
+              .finish();
+            let res_mut = res.response_mut();
+            res_mut.add_cookie(&at_cookie).expect("Could not add cookie: at");
+            res_mut.add_cookie(&rt_cookie).expect("Could not add cookie: rt");
+          }
+
           Ok(res)
         }
         Err(err_msg) => {
-          println!("err");
           Err(ErrorUnauthorized(format!("Invalid token: {}", err_msg).to_string()))?
         } // Handle poisoned lock
       }
     }
     Err(lock_err) => {
-      println!("{}", lock_err);
       Err(
         ErrorInternalServerError(
           format!("Internal Error Occured, PANIC NOW!: {}", "err_msg").to_string()

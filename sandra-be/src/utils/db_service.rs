@@ -97,9 +97,7 @@ impl DBService {
   ) -> Option<User> {
     let mut user = self.user_collection
       .find_one(doc! { "username": username.unwrap(), "password": password.unwrap() }).await
-      .expect("Error checking login user collection")
-      .unwrap();
-    println!("{}", user.gid.unwrap().to_string());
+      .expect("Error checking login user collection")?;
     let group = self.group_collection
       .find_one(doc! { "id": user.gid.unwrap().to_string() }).await
       .expect("Error checking login user collection");
