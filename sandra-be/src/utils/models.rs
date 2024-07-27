@@ -1,7 +1,10 @@
 use mongodb::bson::oid::ObjectId;
+use onvif::soap::client::Credentials; //discovery::Device,
+
 use serde::{ Deserialize, Serialize };
 use strum_macros::{ Display, EnumString };
-use std::fmt;
+use std::{ collections::HashMap, fmt };
+use url::Url;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
@@ -26,7 +29,7 @@ impl fmt::Display for AccessLevel {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Camera {
-  id: String,
+  id: Option<ObjectId>,
   name: String,
   desc: String,
   src_ip: String,
@@ -40,4 +43,21 @@ pub struct Camera {
 pub struct Group {
   pub id: ObjectId,
   pub cameras: Vec<Camera>,
+}
+
+#[derive(Clone)]
+pub struct CameraNet {
+  // pub url: Url,
+  pub dev_srv_url: Result<Url, String>,
+  pub ev_srv_url: Result<Url, String>,
+  pub credentials: Option<Credentials>,
+  // pub addr: String,
+  // pub port: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct Onvif_Ev_Msg {
+  pub src_ip: String,
+  pub topic: String,
+  pub events: HashMap<String, String>,
 }

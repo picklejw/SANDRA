@@ -10,6 +10,7 @@ use actix_cors::Cors;
 use utils::http_service::{ build_auth_routes, build_user_routes };
 use utils::db_service::DBService;
 use utils::auth::jwt_middleware;
+use utils::sub_events;
 mod utils;
 use actix_web_lab::middleware::from_fn;
 

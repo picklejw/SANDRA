@@ -8,7 +8,8 @@ use mongodb::{
   IndexModel,
 };
 use std::ops::Deref;
-
+use serde_json::{ Value };
+use serde::{ Serialize, Deserialize };
 use super::models::Camera;
 
 #[derive(Clone)]
