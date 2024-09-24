@@ -30,7 +30,7 @@ var config = (() => {
   __export(gluestack_style_config_exports, {
     config: () => config
   });
-  var import_react = __require("./mock-32044.js");
+  var import_react = __require("./mock-97406.js");
   var config = (0, import_react.createConfig)({
     aliases: {
       bg: "backgroundColor",

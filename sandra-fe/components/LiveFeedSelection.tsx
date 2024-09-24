@@ -1,6 +1,5 @@
 // this is the con, gettroller for fetching live feed urls from our endpoint to see cameras in realtime
 import { Text, Box } from "@gluestack-ui/themed"
-import type { transform } from "@babel/core";
 import { Animated, TouchableOpacity, View, Dimensions } from "react-native";
 import React, { useEffect, useState, useRef } from "react";
 
@@ -17,6 +16,7 @@ const LiveFeedContainer = {
 export default function LiveFeedSelection() {
   const [isCollapsed, setCollapse] = useState<boolean>()
   const [diffToggleCalc, setDiffToggleCalc] = useState((Dimensions.get("window").height / 2) * -1)
+
 
   const animations = useRef({
     width: new Animated.Value(0),
@@ -76,11 +76,8 @@ export default function LiveFeedSelection() {
             </View >
           </TouchableOpacity>
         </Animated.View>
-        <Animated.View style={{ flex: 1, width: '20px', marginLeft: animations.negWidth}}>
+        <Animated.View style={{ flex: 1, width: '20px', marginLeft: animations.negWidth }}>
           <Text>Live Feed Selection</Text>
-          <Box>
-            <Text>No Media</Text>
-          </Box>
         </Animated.View>
       </View>
     </Animated.View>
