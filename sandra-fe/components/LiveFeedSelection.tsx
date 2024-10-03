@@ -1,7 +1,9 @@
 // this is the con, gettroller for fetching live feed urls from our endpoint to see cameras in realtime
 import { Text, Box } from "@gluestack-ui/themed"
 import { Animated, TouchableOpacity, View, Dimensions } from "react-native";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useContext } from "react";
+import { mediaController } from "./MediaViewer"
+import { getCameras } from "~/utils/api"
 
 const LiveFeedContainer = {
   flexDirection: "row",
@@ -13,9 +15,22 @@ const LiveFeedContainer = {
   width: 300
 }
 
+// interface Props {
+//   cameras: Camera[]
+// }
+
+interface Camera {
+  name: String,
+  rtsp_url: String
+}
+
 export default function LiveFeedSelection() {
   const [isCollapsed, setCollapse] = useState<boolean>()
   const [diffToggleCalc, setDiffToggleCalc] = useState((Dimensions.get("window").height / 2) * -1)
+  const [cameras, setCameras] = useState<Camera[]>([])
+  useEffect(() => {
+    getCameras().then((cameras) => setCameras(cameras))
+  }, [])
 
 
   const animations = useRef({
@@ -33,8 +48,9 @@ export default function LiveFeedSelection() {
         }
       },
     );
+
     return () => subscription?.remove()
-  })
+  }, [])
 
   const toggleView = (setCollapsed: boolean) => {
     const duration = 200
@@ -78,6 +94,20 @@ export default function LiveFeedSelection() {
         </Animated.View>
         <Animated.View style={{ flex: 1, width: '20px', marginLeft: animations.negWidth }}>
           <Text>Live Feed Selection</Text>
+          <div>
+            {cameras.map(({name}, i) => {
+              // debugger
+              return (
+                <div key={i}>
+                  <span>Name:</span> {name}
+                  <button onClick={() => {
+                    debugger
+                    mediaController.changeCamera(name)
+                  }}>Show Camera</button>
+                </div>
+              )
+            })}
+          </div>
         </Animated.View>
       </View>
     </Animated.View>

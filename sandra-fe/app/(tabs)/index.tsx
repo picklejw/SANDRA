@@ -7,7 +7,6 @@ import { Text, Box } from "@gluestack-ui/themed"
 import { useContext, useEffect, useState } from "react";
 import { get } from "@gluestack-style/react";
 import { parseSync } from "@babel/core";
-import { addCamera } from "~/utils/api"
 
 const navAsTabs = (width?: number) => (width || Dimensions.get('window').width) < 768;
 
@@ -19,7 +18,19 @@ const Container = StyleSheet.create({
 });
 
 export default function Dashboard() {
-  useEffect(() => {
+  const { user, setUser } = useContext(AppContext)
+
+  return (
+    <Box style={Container.container}>
+      <LiveFeedSelection />
+      <Box style={{ flex: 1 }}>
+        <MediaViewer />
+      </Box>
+      <Alerts />
+    </Box>
+  );
+}
+
     // addCamera({
     //   name: "hi",
     //   desc: "sc",
@@ -44,18 +55,3 @@ export default function Dashboard() {
     //     mode: 'cors',
     //     // body: ""
     //   }).then((res) => console.log(res.status.toString()))
-    })
-
-  // }, [])
-  const { user, setUser } = useContext(AppContext)
-
-  return (
-    <Box style={Container.container}>
-      <LiveFeedSelection />
-      <Box style={{ flex: 1 }}>
-        <MediaViewer />
-      </Box>
-      <Alerts />
-    </Box>
-  );
-}

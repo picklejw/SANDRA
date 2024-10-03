@@ -1,45 +1,43 @@
-<!doctype html>
 <html>
-
-<head>
-  <title>This is the title of the webpage!</title>
-</head>
-
-<body>
-  <p>This is an example paragraph. Anything in the <strong>body</strong> tag will appear on the page, just like this
-    <strong>p</strong> tag and its contents.</p>
-</body>
-<button onclick="document.doAuth()">Do auth</button>
-<script>
-  document.doAuth = () => {
-    debugger
-    // http://localhost:8020/api/auth?response_type=code&client_id=LocalClient
-    // POST: http://localhost:8020/api/auth?response_type=code&client_id=LocalClient&redirect_uri=http%3A%2F%2Flocalhost%3A8021%2Fendpooint&allow=true
-    // ^^ "http://localhost:8021/endpooint"
-
-    fetch('/api/auth?response_type=code&client_id=LocalClient')
-      .then(response => response.json()).then((preAuth) => {
-        console.log(preAuth)
-        return fetch(
-          "/api/auth?response_type=code&client_id=LocalClient&redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Fapi%2Fuser&allow=true",
-          {
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            method: "POST",
-            // body: JSON.stringify({ a: 1, b: 2 })
-          })
-      }).then((res) => {
-        debugger
-        console.log(res)
-        return fetch("/api/auth/token?grant_type=client_credentials", {
-          method: "POST"
-        })
-      }).then((res) => res.text()),then((text) => {
-        console.log(text)
-      })
-  }
-</script>
-
+  <head>
+    <meta http-equiv="Expires" content="0" />
+    <meta http-equiv="Last-Modified" content="0" />
+    <meta http-equiv="Cache-Control" content="no-cache, mustrevalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <link rel="stylesheet" href="../../static/css/bootstrap.min.css" />
+    <script type="text/javascript" src="../../static/js/jquery-3.4.1.min.js"></script>
+    <script src="../../static/js/bootstrap.min.js"></script>
+    <script src="../../static/js/adapter-latest.js"></script>
+  </head>
+  <body>
+    <h2 align="center">Play Stream H264_AAC</h2>
+    <div class="container">
+      <div class="row">
+        <div class="col-3">
+          <div class="list-group">
+            <a
+              href="H264_AAC"
+              id="H264_AAC"
+              name="H264_AAC"
+              class="list-group-item list-group-item-action active"
+              >H264_AAC</a
+            >
+          </div>
+        </div>
+        <div class="col">
+          <input type="hidden" name="suuid" id="suuid" value="H264_AAC" />
+          <input type="hidden" name="port" id="port" value=":8090" />
+          <input type="hidden" id="localSessionDescription" readonly="true" />
+          <input type="hidden" id="remoteSessionDescription" />
+          <div id="remoteVideos">
+            <video style="width: 600px" id="videoElem" autoplay="" muted="" controls=""></video>
+          </div>
+          <div id="div">checking<br />1 track is delivered<br />connected<br /></div>
+        </div>
+      </div>
+    </div>
+    <label for="cameras-sel">Select Camera:</label>
+    <select id="cameras-sel"></select>
+    <script type="text/javascript" src="/app.js"></script>
+  </body>
 </html>

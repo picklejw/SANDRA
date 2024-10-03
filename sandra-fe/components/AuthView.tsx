@@ -113,7 +113,7 @@ const renderSignup = (setShowView: Function, setMessage: Function, setUser: Func
 }
 
 export default function AuthView({ children }: AuthViewProps) {
-  const [showView, setShowView] = useState<ViewOptions>("login");
+  const [showView, setShowView] = useState<ViewOptions>("isAuth"); //login
   const [showMessage, setMessage] = useState<String>("");
   const [user, setUser] = useState<User>(null);
 

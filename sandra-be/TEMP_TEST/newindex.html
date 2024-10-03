@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Live Video Stream</title>
+    <script src="bootstrap.min.js"></script>
+    <script src="adapter-latest.js"></script>
+  </head>
+  <body>
+    <h1>Live Video Stream</h1>
+    <video id="video" autoplay></video>
+    <div class="col">
+      <div class="list-group"></div>
+      <input type="hidden" name="suuid" id="suuid" value="{{ .suuid }}" />
+      <input type="hidden" name="port" id="port" value="{{ .port }}" />
+      <input type="hidden" id="localSessionDescription" readonly="true" />
+      <input type="hidden" id="remoteSessionDescription" />
+      <div id="remoteVideos">
+        <video style="width: 600px" id="videoElem" autoplay muted controls></video>
+      </div>
+      <div id="div"></div>
+    </div>
+    <label for="cameras-sel">Select Camera:</label>
+    <select id="cameras-sel"></select>
+    <script type="text/javascript" src="newapp.js"></script>
+  </body>
+</html>

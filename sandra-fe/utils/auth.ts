@@ -1,7 +1,5 @@
-const BASE_DOMAIN = "http://localhost:8080"
-
 export const doLogin = (username: String, password: String) => {
-  return fetch(`${BASE_DOMAIN}/api/auth/login`,{
+  return fetch(`/api/auth/login`,{
     method: "POST",
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
@@ -12,7 +10,7 @@ export const doLogin = (username: String, password: String) => {
 }
 
 export const doSignup = (username: String, password: String, gid: String) => {
-  return fetch(`${BASE_DOMAIN}/api/auth/signup`,{
+  return fetch(`/api/auth/signup`,{
     method: "POST",
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({

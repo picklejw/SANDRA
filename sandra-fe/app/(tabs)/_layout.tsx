@@ -3,8 +3,12 @@ import { Tabs } from "expo-router"
 import React, { useEffect, useState, type ReactElement } from "react";
 import { View, Text, Dimensions, Platform } from "react-native";
 import AuthView from "~/components/AuthView";
-import { User } from '~/models';
-import { BASE_DOMAIN } from "~/utils/api";
+import { User } from '~/models/user';
+
+interface StyleAttribs {
+  color: String;
+  size: String | Number;
+}
 
 const isWeb = Platform.OS === 'web'
 const navAsTabs = (width?: number) => (width || Dimensions.get('window').width) < 768;
@@ -17,7 +21,7 @@ const NavStyleDesktop = {
 
 const Logo = () => (<Text>LOGO</Text>)
 const tabBarIconRender = (el: React.JSX | React.ReactElement) => !isWeb ? el : ""
-
+ 
 export default () => {
   const [needsTabBar, setNeedsTabBar] = useState(navAsTabs())
 
@@ -31,104 +35,6 @@ export default () => {
         }
       },
     );
-
-    // setInterval(() => {
-      fetch(`http://localhost:8080/api/user/echo`, {
-        // method: "POST",
-        // headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        mode: 'cors',
-        // body: ""
-      }).then((res) => {
-        fetch(`http://localhost:8080/api/user/echo`, {
-          // method: "POST",
-          // headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          mode: 'cors',
-          // body: ""
-        }).then((res) => {
-          fetch(`http://localhost:8080/api/user/echo`, {
-            // method: "POST",
-            // headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            mode: 'cors',
-            // body: ""
-          }).then((res) => {
-            fetch(`http://localhost:8080/api/user/echo`, {
-              // method: "POST",
-              // headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              mode: 'cors',
-              // body: ""
-            }).then((res) => {
-              fetch(`http://localhost:8080/api/user/echo`, {
-                // method: "POST",
-                // headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                mode: 'cors',
-                // body: ""
-              }).then((res) => console.log(res.status.toString()))
-            })
-          })
-        })
-      })
-
-
-
-      // fetch(`http://localhost:8080/api/user/echo`, {
-      //   // method: "POST",
-      //   // headers: { 'Content-Type': 'application/json' },
-      //   credentials: 'include',
-      //   mode: 'cors',
-      //   // body: ""
-      // }).then((res) => console.log(res.status.toString()))
-      // fetch(`http://localhost:8080/api/user/echo`, {
-      //   // method: "POST",
-      //   // headers: { 'Content-Type': 'application/json' },
-      //   credentials: 'include',
-      //   mode: 'cors',
-      //   // body: ""
-      // }).then((res) => console.log(res.status.toString()))
-
-      // fetch(`http://localhost:8080/api/user/echo`, {
-      //   // method: "POST",
-      //   // headers: { 'Content-Type': 'application/json' },
-      //   credentials: 'include',
-      //   mode: 'cors',
-      //   // body: ""
-      // }).then((res) => console.log(res.status.toString()))
-
-      // fetch(`http://localhost:8080/api/user/echo`, {
-      //   // method: "POST",
-      //   // headers: { 'Content-Type': 'application/json' },
-      //   credentials: 'include',
-      //   mode: 'cors',
-      //   // body: ""
-      // }).then((res) => console.log(res.status.toString()))
-      // fetch(`http://localhost:8080/api/user/echo`, {
-      //   // method: "POST",
-      //   // headers: { 'Content-Type': 'application/json' },
-      //   credentials: 'include',
-      //   mode: 'cors',
-      //   // body: "" 
-      // }).then((res) => console.log(res.status.toString()))
-
-      // fetch(`http://localhost:8080/api/user/echo`, {
-      //   // method: "POST",
-      //   // headers: { 'Content-Type': 'application/json' },
-      //   credentials: 'include',
-      //   mode: 'cors',
-      //   // body: ""
-      // }).then((res) => console.log(res.status.toString()))
-
-      // fetch(`http://localhost:8080/api/user/echo`, {
-      //   // method: "POST",
-      //   // headers: { 'Content-Type': 'application/json' },
-      //   credentials: 'include',
-      //   mode: 'cors',
-      //   // body: ""
-      // }).then((res) => console.log(res.status.toString()))
-    // }, 5000)
 
     return () => {
       subscription?.remove()
@@ -152,7 +58,7 @@ export default () => {
               name="index"
               options={{
                 title: "Dashboard",
-                tabBarIcon: ({ color, size }) => (
+                tabBarIcon: ({ color, size }: StyleAttribs) => (
                   tabBarIconRender(<Text>🖥️</Text>)
                 ),
                 href: "/",
@@ -162,7 +68,7 @@ export default () => {
               name="settings"
               options={{
                 title: "Settings",
-                tabBarIcon: ({ color, size }) => (
+                tabBarIcon: ({ color, size }: StyleAttribs) => (
                   tabBarIconRender(<Text>⚙️</Text>)
                 ),
                 href: "/settings",

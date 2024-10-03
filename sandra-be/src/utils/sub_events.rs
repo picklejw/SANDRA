@@ -1,7 +1,7 @@
 use onvif::{ discovery, soap::client::{ Client, ClientBuilder, Credentials } }; //discovery::Device,
 use onvif_utils::event::{ self, CreatePullPointSubscription, PullMessages };
 use onvif_utils::devicemgmt::get_capabilities;
-use url::Url;
+use url::{ Url, ParseError };
 use chrono::{ DateTime, Duration, Utc };
 use b_2::{ NotificationMessageHolderType };
 use std::{ collections::HashMap, fmt::Debug, num::ParseIntError };
@@ -14,14 +14,46 @@ use tokio::sync::{ Mutex };
 use local_ip_address::{ local_ip, list_afinet_netifas };
 use tokio::sync::broadcast;
 use tokio::task;
+use url::form_urlencoded;
+use uuid::Uuid;
 
 fn contains_any(s: &str, substrings: &[&str]) -> bool {
   substrings.iter().any(|&sub| s.contains(sub))
 }
 
-struct SubscribeEvents {
-  notifier: Arc<Mutex<broadcast::Sender<Onvif_Ev_Msg>>>,
-  device: CameraNet,
+// #[derive(serde::Serialize)]
+pub struct CameraList {
+  pub devices: Vec<SubscribeEvents>,
+  d_username: String,
+  d_password: String,
+}
+
+impl CameraList {
+  fn add_device(&mut self, dev: SubscribeEvents) {
+    &self.devices.push(dev);
+  }
+  pub fn get_all_devices(&self) -> &Vec<SubscribeEvents> {
+    &self.devices
+  }
+
+  pub async fn scan_for_devices(username: String, password: String) -> Self {
+    let discovered_cameras = discover_onvif(username.clone(), password.clone()).await.into_iter();
+    let mut sub_ev: Vec<SubscribeEvents> = Vec::new();
+    for camera in discovered_cameras {
+      let mut n_sub = SubscribeEvents::new(camera);
+      sub_ev.push(n_sub);
+    }
+    CameraList {
+      d_username: username,
+      d_password: password,
+      devices: sub_ev,
+    }
+  }
+}
+
+pub struct SubscribeEvents {
+  pub notifier: Arc<Mutex<broadcast::Sender<Onvif_Ev_Msg>>>,
+  pub device: CameraNet,
 }
 impl SubscribeEvents {
   fn new(device: CameraNet) -> Self {
@@ -185,6 +217,18 @@ fn is_ipv6_link_local(ip: &IpAddr) -> bool {
   }
 }
 
+fn format_rtsp_with_auth(username: &str, password: &str, rtsp_url: String) -> String {
+  let proto_str = "rtsp://";
+  let parts: Vec<&str> = rtsp_url.split(&proto_str).collect();
+  let encoded_usr = form_urlencoded::byte_serialize(username.as_bytes()).collect::<String>();
+  let encoded_pw = form_urlencoded::byte_serialize(password.as_bytes()).collect::<String>();
+  proto_str.to_owned() + &encoded_usr + ":" + &encoded_pw + "@" + parts[1]
+}
+
+struct GotCapabilities {
+  ev_srv: Result<Url, String>,
+}
+
 pub async fn discover_onvif(username: String, password: String) -> Vec<CameraNet> {
   let mut all_local_ips: Vec<&IpAddr> = Vec::new();
   let network_interfaces = list_afinet_netifas().unwrap();
@@ -195,8 +239,8 @@ pub async fn discover_onvif(username: String, password: String) -> Vec<CameraNet
   use futures_util::stream::StreamExt;
   let mut onvif_results: Vec<CameraNet> = Vec::new();
   let credentials = Credentials {
-    username,
-    password,
+    username: username.clone(),
+    password: password.clone(),
   };
 
   for lan_ip in all_local_ips {
@@ -207,6 +251,7 @@ pub async fn discover_onvif(username: String, password: String) -> Vec<CameraNet
 
     disc_build.listen_address(lan_ip.to_owned());
     if let Ok(safe_build) = disc_build.run().await {
+      println!("{}", lan_ip);
       let devices: Vec<onvif::discovery::Device> = safe_build.collect().await;
       for dev in devices {
         for d_url in dev.urls {
@@ -214,12 +259,35 @@ pub async fn discover_onvif(username: String, password: String) -> Vec<CameraNet
             .credentials(Some(credentials.clone()))
             // .auth_type(auth_type.clone())
             .build();
-          let ev_srv: Result<url::Url, String> = match
+          let profiles = onvif_utils::media::get_profiles(&ttr, &Default::default()).await;
+          let stream_uri_response = onvif_utils::media::get_stream_uri(
+            &ttr,
+            &(onvif_utils::media::GetStreamUri {
+              profile_token: onvif_utils::onvif::ReferenceToken(
+                profiles.as_ref().unwrap().profiles.first().unwrap().token.0.clone()
+              ),
+              stream_setup: onvif_utils::onvif::StreamSetup {
+                stream: onvif_utils::onvif::StreamType::RtpUnicast,
+                transport: onvif_utils::onvif::Transport {
+                  protocol: onvif_utils::onvif::TransportProtocol::Rtsp,
+                  tunnel: vec![],
+                },
+              },
+            })
+          ).await;
+          let stream_uri: String = stream_uri_response.expect(
+            "Could not get RTSP uri"
+          ).media_uri.uri;
+          let capabilities: Result<GotCapabilities, String> = match
             onvif_utils::devicemgmt::get_capabilities(&ttr, &Default::default()).await
           {
             Ok(capabilities) => {
+              // capabilities.capabilities.media[0].x_addr;
               let ev_addr = &capabilities.capabilities.events[0].x_addr;
-              Url::parse(&ev_addr).map_err(|e| e.to_string())
+
+              Ok(GotCapabilities {
+                ev_srv: Url::parse(&ev_addr).map_err(|e| e.to_string()),
+              })
             }
             Err(error) => {
               println!("Failed to fetch capabilities: {}", error);
@@ -227,11 +295,26 @@ pub async fn discover_onvif(username: String, password: String) -> Vec<CameraNet
             }
           };
 
-          onvif_results.push(CameraNet {
-            dev_srv_url: Ok(d_url),
-            ev_srv_url: ev_srv,
-            credentials: Some(credentials.clone()),
-          });
+          match capabilities {
+            Ok(got_cap) => {
+              onvif_results.push(CameraNet {
+                name: Uuid::new_v4().to_string(),
+                dev_srv_url: Ok(d_url),
+                ev_srv_url: got_cap.ev_srv,
+                media_urls: Ok(format_rtsp_with_auth(&username, &password, stream_uri)),
+                credentials: Some(credentials.clone()),
+              });
+            }
+            Err(err) => {
+              onvif_results.push(CameraNet {
+                name: Uuid::new_v4().to_string(),
+                dev_srv_url: Ok(d_url),
+                ev_srv_url: Err("Could not get capabilities".to_string()),
+                media_urls: Err("Could not get capabilities".to_string()),
+                credentials: Some(credentials.clone()),
+              });
+            }
+          }
         }
       }
     }
@@ -241,17 +324,17 @@ pub async fn discover_onvif(username: String, password: String) -> Vec<CameraNet
   onvif_results
 }
 
-pub async fn auto_discover_and_subscribe(default_username: String, default_pw: String) {
-  // tokio::spawn(async {
-  let onvif_cameras = discover_onvif(default_username, default_pw).await.into_iter();
-  for camera in onvif_cameras {
-    println!("{:#?}", camera.ev_srv_url);
-    tokio::spawn(async move {
-      let mut n_sub = SubscribeEvents::new(camera);
-      n_sub.sub_events(|msg: &Onvif_Ev_Msg| {
-        println!("Received message: {:#?}", msg);
-      }).await;
-    });
-  }
-  // });
-}
+// pub async fn auto_discover_and_subscribe(default_username: String, default_pw: String) {
+//   // tokio::spawn(async {
+//   let onvif_cameras = discover_onvif(default_username, default_pw).await.into_iter();
+//   for camera in onvif_cameras {
+//     println!("{:#?}", camera.ev_srv_url);
+//     tokio::spawn(async move {
+//       let mut n_sub = SubscribeEvents::new(camera);
+//       n_sub.sub_events(|msg: &Onvif_Ev_Msg| {
+//         println!("Received message: {:#?}", msg);
+//       }).await;
+//     });
+//   }
+//   // });
+// }

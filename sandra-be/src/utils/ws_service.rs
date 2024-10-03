@@ -1,76 +1,173 @@
-use actix_web::{ web, App, HttpServer, HttpResponse, HttpRequest };
-use actix::{ Actor, AsyncContext, StreamHandler };
+use actix::prelude::{ Actor, Handler, Recipient };
+use std::collections::HashMap;
+use uuid::Uuid;
+use actix::StreamHandler;
+use actix_web::{ get, web::Payload, Error, HttpResponse, HttpRequest };
 use actix_web_actors::ws;
-use futures::StreamExt;
-use onvif_utils::onvif::Message;
-use retina::{ RtspClient, Frame };
+use std::time::Instant;
+use std::sync::RwLock;
+use actix::prelude::Message;
+use actix_web_actors::ws::Message::Text;
+use serde::{ Deserialize, Serialize };
 
-struct VideoSession {
-  // This will hold a WebSocket connection
-  ws: Option<actix_web_actors::ws::WebsocketContext<VideoSession>>,
-}
+// #[derive(Message)]
+// #[rtype(result = "String")]
+// pub struct WsMessage(pub String);
+// type Socket = Recipient<WsMessage>;
 
-impl Actor for VideoSession {
-  type Context = ws::WebsocketContext<Self>;
-}
-
-// impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for VideoSession {
-//   fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
-//     match msg {
-//       Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
-//       Ok(ws::Message::Text(text)) => ctx.text(text),
-//       Ok(ws::Message::Binary(bin)) => ctx.binary(bin),
-//       _ => (),
-//     }
+// pub struct WsParty {
+//     name: String,
+//     subd_users: RwLock<HashMap<String, WsUser>>,
 // }
 
-impl actix_web_actors::ws::WsMessageHandler for VideoSession {
-  fn handle_message(
-    &mut self,
-    msg: actix_web_actors::ws::Message,
-    ctx: &mut actix_web_actors::ws::WebSocketContext<Self>
-  ) {
-    match msg {
-      actix_web_actors::ws::Message::Ping(ping) => ctx.pong(ping),
-      _ => (),
+// impl WsParty {
+//     pub fn new(name: String) -> WsParty {
+//         WsParty {
+//             name,
+//             subd_users: RwLock::new(HashMap::new()),
+//         }
+//     }
+//     pub fn broadcast(msg: &str) {}
+
+//     pub fn add_user() {}
+
+//     pub fn remove_user() {}
+// }
+
+pub struct WsUser {
+  username: String,
+  gid: Uuid,
+}
+
+impl WsUser {
+  fn send_message(msg: &str) {}
+  fn remove_user() {}
+}
+pub struct WsHandler {
+  users: RwLock<HashMap<String, WsUser>>,
+  parties: RwLock<HashMap<String, WsUser>>,
+  hb: Instant,
+  listener_cb: Option<Box<dyn Fn(WsJSON)>>,
+}
+
+impl Default for WsHandler {
+  fn default() -> WsHandler {
+    WsHandler {
+      users: RwLock::new(HashMap::new()),
+      parties: RwLock::new(HashMap::new()),
+      hb: Instant::now(),
+      listener_cb: None,
     }
   }
 }
 
-pub async fn video_stream(
-  req: HttpRequest,
-  stream: web::Payload,
-  srv: web::Data<VideoSession>
-) -> HttpResponse {
-  let mut rtsp_client = RtspClient::new("rtsp://your_rtsp_source").await.unwrap();
-  let (sink, stream) = ws.split();
+impl WsHandler {
+  // fn send_message(&self, message: &str, id_to: &Uuid) {
+  //     if let Some(socket_recipient) = self.users.get(id_to) {
+  //         let _ = socket_recipient.do_send(WsMessage(message.to_owned()));
+  //     } else {
+  //         print!("attempting to send msg but no user id found")
+  //     }
+  // }
 
-  // Spawn a task to handle the RTSP stream and send frames over the WebSocket
-  tokio::spawn(async move {
-    while let Some(frame) = rtsp_client.next_frame().await.unwrap() {
-      // Encode the frame to a suitable format (e.g., base64 or binary data)
-      let data = encode_frame_to_websocket(&frame);
-      // Send the encoded frame over WebSocket
-      sink.send(actix_web_actors::ws::Message::Binary(data)).await.unwrap();
-    }
-  });
+  fn broadcast(&self, msg: &str) {}
 
-  HttpResponse::Ok().finish()
+  fn add_user(&self, user: WsUser) {}
+  fn add_party_group(&self, name: String) {
+    // self.parties.
+  }
+  fn set_listener(&mut self, callback: Box<dyn Fn(WsJSON)>) {
+    self.listener_cb = Some(callback);
+  }
 }
 
-fn encode_frame_to_websocket(frame: &Frame) -> Vec<u8> {
-  // Convert the frame to a binary format suitable for WebSocket
-  // This is a placeholder implementation
-  frame.data.clone()
+impl Actor for WsHandler {
+  type Context = ws::WebsocketContext<Self>;
+
+  fn started(&mut self, ctx: &mut Self::Context) {
+    // Logic when a user joins
+    println!("User {} has joined.", "self.id");
+
+    // Optionally send a welcome message
+    ctx.text(format!("Welcome! You are user #{}", "self.id"));
+
+    // You could also broadcast to other users here
+    // e.g., broadcast_message("A new user has joined!");
+  }
+
+  fn stopped(&mut self, _: &mut Self::Context) {
+    // Logic when a user disconnects
+    println!("User {} has left.", "self.id");
+  }
 }
 
-// #[actix_web::main]
-// async fn main() -> std::io::Result<()> {
-//   HttpServer::new(|| {
-//     App::new()
-//       .app_data(web::Data::new(VideoSession { ws: None }))
-//       .route("/ws", web::get().to(video_stream))
-//   })
-//     .bind("127.0.0.1:8080")?
-//     .run().await
+// #[get("/ws")]
+// pub async fn start_connection(req: HttpRequest, stream: Payload) -> Result<HttpResponse, Error> {
+//   let ws = WsHandler::default();
+
+//   let resp = ws::start(ws, &req, stream).expect("Could not start WS");
+//   Ok(resp)
 // }
+
+// pub fn create_start_connection(
+//   ws: WsHandler
+// ) -> fn(req: HttpRequest, stream: Payload) -> Result<HttpResponse, Error> {
+//   // #[get("/ws")]
+
+//   async fn start_connection(req: HttpRequest, stream: Payload) -> Result<HttpResponse, Error> {
+//     let resp = ws::start(ws, &req, stream).expect("Could not start WS");
+//     Ok(resp)
+//   }
+//   start_connection
+// }
+
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct ClientActorMessage {
+  pub username: String,
+  pub msg: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct WsJSON {
+  ev: String,
+  msg: String,
+}
+
+impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsHandler {
+  fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
+    match msg {
+      Ok(ws::Message::Ping(msg)) => {
+        self.hb = Instant::now();
+        ctx.pong(&msg)
+      }
+      Ok(ws::Message::Pong(_)) => {
+        self.hb = Instant::now();
+      }
+      Ok(ws::Message::Binary(bin)) => ctx.binary(bin),
+      Ok(ws::Message::Close(reason)) => {
+        ctx.close(reason);
+        // ctx.stop()
+      }
+      Ok(ws::Message::Continuation(_)) => {
+        // ctx.stop();
+      }
+      Ok(ws::Message::Nop) => (),
+      Ok(Text(s)) => {
+        match serde_json::from_str::<WsJSON>(&s) {
+          Ok(json) => {
+            println!("Parsed: {:?}", json);
+
+            if let Some(ref callback) = self.listener_cb {
+              callback(json);
+            }
+          }
+          Err(e) => {
+            eprintln!("Failed to parse JSON: {}", e);
+          }
+        }
+      }
+      Err(e) => panic!("{}", e),
+    }
+  }
+}

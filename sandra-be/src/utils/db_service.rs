@@ -108,10 +108,11 @@ impl DBService {
 
   pub async fn add_camera_by_gid(
     &self,
-    gid: Option<mongodb::bson::oid::ObjectId>,
+    gid: Option<mongodb::bson::oid::ObjectId>, // bad practice, gives any auth user control to add camera to any group. SHould do this base on auth token.
     n_camera: Option<Camera>
   ) -> Option<Vec<Camera>> {
     let filter = doc! { "id": gid.unwrap() };
+
     let n_cam_doc = to_document(&n_camera.unwrap()).expect("Convert of camera to document failed");
     let update_doc = doc! { "$push": { "cameras": n_cam_doc} };
     let n_group = self.group_collection
