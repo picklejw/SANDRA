@@ -23,7 +23,7 @@ const Logo = () => (<Text>LOGO</Text>)
 const tabBarIconRender = (el: React.JSX | React.ReactElement) => !isWeb ? el : ""
  
 export default () => {
-  const [needsTabBar, setNeedsTabBar] = useState(navAsTabs())
+  const [needsTabBar, setNeedsTabBar] = useState(navAsTabs)
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener(

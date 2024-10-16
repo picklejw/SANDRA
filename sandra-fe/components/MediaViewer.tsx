@@ -26,7 +26,7 @@ export default function MediaViewer() {
   const renderContent = () => {
     return (<>
       <Text style={{ color: "white", lineHeight: "100%" }}>{title !== "" ? title : "No Media"}</Text>
-      <video ref={videoRef} style={{ width: 600 }} id="videoElem" autoPlay muted controls></video>
+      <video ref={videoRef} style={{ width: "100%", height: "100%" }} autoPlay muted controls></video>
     </>)
   };
 
@@ -111,6 +111,7 @@ class WebRTCConnection {
       if (this.stream) {
         this.stream.addTrack(event.track);
         this.log(`${event.streams.length} track is delivered`);
+        this.registeredCallback?.("HELLO!", this.stream)
       }
     };
 
