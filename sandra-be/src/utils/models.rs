@@ -1,9 +1,9 @@
 use mongodb::bson::oid::ObjectId;
 use onvif::soap::client::Credentials; //discovery::Device,
 
-use serde::{ Deserialize, Serialize };
-use strum_macros::{ Display, EnumString };
-use std::{ collections::HashMap, fmt };
+use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, fmt};
+use strum_macros::{Display, EnumString};
 use url::Url;
 use uuid::Uuid;
 

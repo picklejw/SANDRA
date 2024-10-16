@@ -1,14 +1,14 @@
-use actix::prelude::{ Actor, Handler, Recipient };
-use std::collections::HashMap;
-use uuid::Uuid;
-use actix::StreamHandler;
-use actix_web::{ get, web::Payload, Error, HttpResponse, HttpRequest };
-use actix_web_actors::ws;
-use std::time::Instant;
-use std::sync::RwLock;
 use actix::prelude::Message;
+use actix::prelude::{Actor, Handler, Recipient};
+use actix::StreamHandler;
+use actix_web::{get, web::Payload, Error, HttpRequest, HttpResponse};
+use actix_web_actors::ws;
 use actix_web_actors::ws::Message::Text;
-use serde::{ Deserialize, Serialize };
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::RwLock;
+use std::time::Instant;
+use uuid::Uuid;
 
 // #[derive(Message)]
 // #[rtype(result = "String")]
@@ -153,20 +153,18 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsHandler {
         // ctx.stop();
       }
       Ok(ws::Message::Nop) => (),
-      Ok(Text(s)) => {
-        match serde_json::from_str::<WsJSON>(&s) {
-          Ok(json) => {
-            println!("Parsed: {:?}", json);
+      Ok(Text(s)) => match serde_json::from_str::<WsJSON>(&s) {
+        Ok(json) => {
+          println!("Parsed: {:?}", json);
 
-            if let Some(ref callback) = self.listener_cb {
-              callback(json);
-            }
-          }
-          Err(e) => {
-            eprintln!("Failed to parse JSON: {}", e);
+          if let Some(ref callback) = self.listener_cb {
+            callback(json);
           }
         }
-      }
+        Err(e) => {
+          eprintln!("Failed to parse JSON: {}", e);
+        }
+      },
       Err(e) => panic!("{}", e),
     }
   }
