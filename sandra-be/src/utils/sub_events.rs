@@ -131,7 +131,7 @@ impl SubscribeEvents {
         let inst_pull_messages_request = PullMessages {
           message_limit: 32,
           timeout: xsd_types::types::Duration {
-            seconds: 1.0,
+            seconds: 0.1,
             ..Default::default()
           },
         };
@@ -204,7 +204,7 @@ impl SubscribeEvents {
           }
         }
 
-        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
       }
     });
   }
