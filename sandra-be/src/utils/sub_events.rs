@@ -16,6 +16,8 @@ use tokio::task;
 use url::form_urlencoded;
 use url::{ ParseError, Url };
 use uuid::Uuid;
+use std::future::Future;
+use std::pin::Pin;
 
 fn contains_any(s: &str, substrings: &[&str]) -> bool {
   substrings.iter().any(|&sub| s.contains(sub))
@@ -52,7 +54,7 @@ impl CameraList {
 }
 
 pub struct SubscribeEvents {
-  pub notifier: Arc<Mutex<broadcast::Sender<Onvif_Ev_Msg>>>,
+  notifier: Arc<Mutex<broadcast::Sender<Onvif_Ev_Msg>>>,
   pub device: CameraNet,
 }
 impl SubscribeEvents {
@@ -70,13 +72,15 @@ impl SubscribeEvents {
   }
 
   pub async fn sub_events<F>(&self, handler: F) -> task::JoinHandle<()>
-    where F: Fn(&Onvif_Ev_Msg) + 'static + Send + Sync
+    where F: Fn(Onvif_Ev_Msg) -> Pin<Box<dyn Future<Output = ()> + Send>> + 'static + Send + Sync
   {
     let tx = self.notifier.clone();
     let mut rx = tx.lock().await.subscribe();
     task::spawn(async move {
       while let Ok(message) = rx.recv().await {
-        handler(&message);
+        println!("111111");
+
+        handler(message).await;
       }
     })
   }
@@ -86,6 +90,7 @@ impl SubscribeEvents {
     source: CameraNet
   ) {
     tokio::spawn(async move {
+      println!("doing stat watch");
       async fn do_authenitcate(camera: &CameraNet) -> (Client, PullMessages) {
         let creds: Credentials = camera.credentials
           .clone()
@@ -192,7 +197,7 @@ impl SubscribeEvents {
 
           if events.len() > 0 {
             let _ = notifier.lock().await.send(Onvif_Ev_Msg {
-              src_ip: source.ev_srv_url.clone().unwrap().to_string(),
+              src_uri: source.ev_srv_url.clone().unwrap().to_string(),
               topic: String::from(&nn.topic.inner_text),
               events,
             });

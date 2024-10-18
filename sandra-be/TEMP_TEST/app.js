@@ -1,3 +1,23 @@
+const socket = new WebSocket("ws://127.0.0.1:8080/ws");
+
+socket.onopen = function (event) {
+  console.log(event);
+};
+
+socket.onmessage = function (event) {
+  console.log(event);
+};
+
+socket.onclose = function (event) {
+  console.log(event);
+};
+
+function sendMessage(message) {
+  socket.send(message);
+}
+
+window.joe_sock = socket;
+
 const doLogin = (username, password) => {
   return fetch(`/api/auth/login`, {
     method: "POST",

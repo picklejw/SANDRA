@@ -4,6 +4,7 @@ import { Text, Box } from "@gluestack-ui/themed"
 import type { transform } from "@babel/core";
 import { Animated, TouchableOpacity, View, Dimensions } from "react-native";
 import React, { useEffect, useState, useRef } from "react";
+import WebSocketClient from "~/utils/ws"
 
 const AlertsContainer = {
   flexDirection: "row",
@@ -15,8 +16,9 @@ const AlertsContainer = {
   width: 300
 }
 
-export default function MediaViewer() {
+export default function AlertsViewer() {
   const [isCollapsed, setCollapse] = useState<boolean>()
+  const [alerts, setAlerts] = useState<string[]>([])
   const [diffToggleCalc, setDiffToggleCalc] = useState(Dimensions.get("window").height / 2)
 
   const animations = useRef({
@@ -34,6 +36,11 @@ export default function MediaViewer() {
         }
       },
     );
+    const wsClient = new WebSocketClient('ws://127.0.0.1:8080/ws')
+    wsClient.on('Cam_Motion', ({topic}) => {
+      // console.log('Received someEvent with body:', body);
+      setAlerts([...alerts, topic])
+    });
     return () => subscription?.remove()
   })
 
@@ -65,21 +72,25 @@ export default function MediaViewer() {
     }
   }
 
-    return (
-      <Animated.View style={{...AlertsContainer, marginLeft: animations.marginLeft, left: animations.left}}>
-        <View>
-          <TouchableOpacity style={{ width: 20 }} onPress={() => toggleView(!isCollapsed)}>
-            <View style={{ transform: [{ rotate: '90deg' }, { translateX: diffToggleCalc }, { translateY: 0 }], height: 20, width: 150, alignSelf: 'center' }}>
-              <Text style={{ textAlign: "center" }}>{isCollapsed ? "Expand Alerts" : "Collpase"}</Text>
-            </View >
-          </TouchableOpacity>
-          <Box style={{marginLeft: 20}}>
-              <Text>Alerts</Text>
-              <Box>
-                <Text>No Media</Text>
-              </Box>
-            </Box>
-          </View>
-      </Animated.View>
-    );
-  }
+  return (
+    <Animated.View style={{ ...AlertsContainer, marginLeft: animations.marginLeft, left: animations.left }}>
+      <View>
+        <TouchableOpacity style={{ width: 20 }} onPress={() => toggleView(!isCollapsed)}>
+          <View style={{ transform: [{ rotate: '90deg' }, { translateX: diffToggleCalc }, { translateY: 0 }], height: 20, width: 150, alignSelf: 'center' }}>
+            <Text style={{ textAlign: "center" }}>{isCollapsed ? "Expand Alerts" : "Collpase"}</Text>
+          </View >
+        </TouchableOpacity>
+        <Box style={{ marginLeft: 20 }}>
+          <Text>Alerts</Text>
+          <Box>
+            {alerts?.map((alert) => (
+              <div>
+                <p>{alert}</p>
+              </div>
+            ))}
+          </Box>
+        </Box>
+      </View>
+    </Animated.View>
+  );
+}

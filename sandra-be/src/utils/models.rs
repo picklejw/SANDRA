@@ -1,9 +1,9 @@
 use mongodb::bson::oid::ObjectId;
 use onvif::soap::client::Credentials; //discovery::Device,
 
-use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt};
-use strum_macros::{Display, EnumString};
+use serde::{ Deserialize, Serialize };
+use std::{ collections::HashMap, fmt };
+use strum_macros::{ Display, EnumString };
 use url::Url;
 use uuid::Uuid;
 
@@ -52,11 +52,17 @@ pub struct CameraNet {
   // pub port: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Onvif_Ev_Msg {
-  pub src_ip: String,
+  pub src_uri: String,
   pub topic: String,
   pub events: HashMap<String, String>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct WsMsg {
+  pub ev: String,
+  pub body: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
