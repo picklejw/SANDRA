@@ -36,7 +36,7 @@ mongodb = { version = "3.0.1" }
 futures = "0.3.30"
 actix-cors = "0.7.0"
 env_logger = "0.11.3"
-uuid = { version = "1.0", features = ["v4"] }
+uuid = { version = "1.11.0", features = ["v4"] }
 base64 = "0.22.1"
 lazy_static = "1.5.0"
 futures-util = "0.3.30"
@@ -48,7 +48,7 @@ dhcp4r = { git = "https://github.com/pj1234678/RustyDHCP", version = "0.2.3" }
 awc = "3.5.1"
 reqwest = "0.12.7"
 signal = "0.7.0"
-# rust_jwt_actix = { git = "https://github.com/jwolfgram/rust_jwt_actix", branch = "main" }
-rust_jwt_actix = { path = "../../rust_jwt_actix" }
+rust_jwt_actix = { git = "https://github.com/jwolfgram/rust_jwt_actix", branch = "main" }
+#rust_jwt_actix = { path = "../../rust_jwt_actix" }
 ctrlc = "3.4.5"
 dotenv = "0.15.0"
