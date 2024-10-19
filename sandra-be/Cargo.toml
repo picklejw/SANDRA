@@ -51,3 +51,4 @@ signal = "0.7.0"
 # rust_jwt_actix = { git = "https://github.com/jwolfgram/rust_jwt_actix", branch = "main" }
 rust_jwt_actix = { path = "../../rust_jwt_actix" }
 ctrlc = "3.4.5"
+dotenv = "0.15.0"

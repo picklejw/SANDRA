@@ -1,20 +1,16 @@
 use crate::utils::models::{ CameraNet, Onvif_Ev_Msg };
-use b_2::NotificationMessageHolderType;
 use chrono::{ DateTime, Duration, Utc };
-use local_ip_address::{ list_afinet_netifas, local_ip };
-use onvif::{ discovery, soap::client::{ Client, ClientBuilder, Credentials } }; //discovery::Device,
-use onvif_utils::devicemgmt::get_capabilities;
+use local_ip_address::list_afinet_netifas;
+use onvif::{ discovery, soap::client::{ Client, ClientBuilder, Credentials } };
 use onvif_utils::event::{ self, CreatePullPointSubscription, PullMessages };
-use std::net::{ IpAddr, Ipv4Addr, Ipv6Addr };
-use std::sync::mpsc::channel;
+use std::net::{ IpAddr, Ipv6Addr };
 use std::sync::Arc;
-use std::thread;
-use std::{ collections::HashMap, fmt::Debug, num::ParseIntError };
+use std::collections::HashMap;
 use tokio::sync::broadcast;
 use tokio::sync::Mutex;
 use tokio::task;
 use url::form_urlencoded;
-use url::{ ParseError, Url };
+use url::Url;
 use uuid::Uuid;
 use std::future::Future;
 use std::pin::Pin;
@@ -23,7 +19,6 @@ fn contains_any(s: &str, substrings: &[&str]) -> bool {
   substrings.iter().any(|&sub| s.contains(sub))
 }
 
-// #[derive(serde::Serialize)]
 pub struct CameraList {
   pub devices: Vec<SubscribeEvents>,
   d_username: String,
@@ -31,9 +26,6 @@ pub struct CameraList {
 }
 
 impl CameraList {
-  fn add_device(&mut self, dev: SubscribeEvents) {
-    &self.devices.push(dev);
-  }
   pub fn get_all_devices(&self) -> &Vec<SubscribeEvents> {
     &self.devices
   }
@@ -42,7 +34,7 @@ impl CameraList {
     let discovered_cameras = discover_onvif(username.clone(), password.clone()).await.into_iter();
     let mut sub_ev: Vec<SubscribeEvents> = Vec::new();
     for camera in discovered_cameras {
-      let mut n_sub = SubscribeEvents::new(camera);
+      let n_sub = SubscribeEvents::new(camera);
       sub_ev.push(n_sub);
     }
     CameraList {
@@ -78,8 +70,6 @@ impl SubscribeEvents {
     let mut rx = tx.lock().await.subscribe();
     task::spawn(async move {
       while let Ok(message) = rx.recv().await {
-        println!("111111");
-
         handler(message).await;
       }
     })
@@ -153,11 +143,12 @@ impl SubscribeEvents {
         }
 
         // Do check for pull messages
+        println!("pulling ev");
         let pull_messages_response = event::pull_messages(
           &pull_msg_client,
           &pull_messages_request
         ).await;
-        let mut msg = match pull_messages_response {
+        let msg = match pull_messages_response {
           Ok(msg) => msg,
           Err(e) => {
             println!("Error: {:?}", e);
@@ -174,7 +165,6 @@ impl SubscribeEvents {
         if !msg.notification_message.is_empty() {
           let nn = &msg.notification_message[0];
           let mut events: HashMap<String, String> = HashMap::new();
-          // println!("{:#?}", nn);
 
           let ev_name = nn.topic.inner_text.clone().split('/').last().unwrap().to_string();
 
@@ -185,11 +175,10 @@ impl SubscribeEvents {
               nn.topic.inner_text.clone().split('/').last().unwrap().to_string()
             );
           }
-          // let ev_msg_data = nn.message.msg.data.simple_item.into_iter();
+
           for msg_dat in nn.message.msg.data.simple_item.iter() {
             if msg_dat.name == "IsMotion" {
-              // && msg_dat.value == "false"
-              // do_skip = true;
+              println!("Motion detected (not reported), {:?}", msg_dat.value);
               continue;
             }
             events.insert(msg_dat.name.to_owned(), msg_dat.value.to_owned());
@@ -256,7 +245,6 @@ pub async fn discover_onvif(username: String, password: String) -> Vec<CameraNet
 
     disc_build.listen_address(lan_ip.to_owned());
     if let Ok(safe_build) = disc_build.run().await {
-      println!("{}", lan_ip);
       let devices: Vec<onvif::discovery::Device> = safe_build.collect().await;
       println!("{:#?}", &devices);
       for dev in devices {
@@ -315,8 +303,8 @@ pub async fn discover_onvif(username: String, password: String) -> Vec<CameraNet
               onvif_results.push(CameraNet {
                 name: Uuid::new_v4().to_string(),
                 dev_srv_url: Ok(d_url),
-                ev_srv_url: Err("Could not get capabilities".to_string()),
-                media_urls: Err("Could not get capabilities".to_string()),
+                ev_srv_url: Err(err.to_string()),
+                media_urls: Err(err.to_string()),
                 credentials: Some(credentials.clone()),
               });
             }
@@ -329,18 +317,3 @@ pub async fn discover_onvif(username: String, password: String) -> Vec<CameraNet
   println!("Done looking");
   onvif_results
 }
-
-// pub async fn auto_discover_and_subscribe(default_username: String, default_pw: String) {
-//   // tokio::spawn(async {
-//   let onvif_cameras = discover_onvif(default_username, default_pw).await.into_iter();
-//   for camera in onvif_cameras {
-//     println!("{:#?}", camera.ev_srv_url);
-//     tokio::spawn(async move {
-//       let mut n_sub = SubscribeEvents::new(camera);
-//       n_sub.sub_events(|msg: &Onvif_Ev_Msg| {
-//         println!("Received message: {:#?}", msg);
-//       }).await;
-//     });
-//   }
-//   // });
-// }
