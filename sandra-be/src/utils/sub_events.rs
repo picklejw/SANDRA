@@ -1,19 +1,22 @@
-use crate::utils::models::{ CameraNet, Onvif_Ev_Msg };
-use chrono::{ DateTime, Duration, Utc };
+use crate::utils::models::{CameraNet, OnvifEvMsg};
+use chrono::{DateTime, Duration, Utc};
 use local_ip_address::list_afinet_netifas;
-use onvif::{ discovery, soap::client::{ Client, ClientBuilder, Credentials } };
-use onvif_utils::event::{ self, CreatePullPointSubscription, PullMessages };
-use std::net::{ IpAddr, Ipv6Addr };
-use std::sync::Arc;
+use onvif::{
+  discovery,
+  soap::client::{Client, ClientBuilder, Credentials},
+};
+use onvif_utils::event::{self, CreatePullPointSubscription, PullMessages};
 use std::collections::HashMap;
+use std::future::Future;
+use std::net::{IpAddr, Ipv6Addr};
+use std::pin::Pin;
+use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::Mutex;
 use tokio::task;
 use url::form_urlencoded;
 use url::Url;
 use uuid::Uuid;
-use std::future::Future;
-use std::pin::Pin;
 
 fn contains_any(s: &str, substrings: &[&str]) -> bool {
   substrings.iter().any(|&sub| s.contains(sub))
@@ -46,7 +49,7 @@ impl CameraList {
 }
 
 pub struct SubscribeEvents {
-  notifier: Arc<Mutex<broadcast::Sender<Onvif_Ev_Msg>>>,
+  notifier: Arc<Mutex<broadcast::Sender<OnvifEvMsg>>>,
   pub device: CameraNet,
 }
 impl SubscribeEvents {
@@ -64,7 +67,8 @@ impl SubscribeEvents {
   }
 
   pub async fn sub_events<F>(&self, handler: F) -> task::JoinHandle<()>
-    where F: Fn(Onvif_Ev_Msg) -> Pin<Box<dyn Future<Output = ()> + Send>> + 'static + Send + Sync
+  where
+    F: Fn(OnvifEvMsg) -> Pin<Box<dyn Future<Output = ()> + Send>> + 'static + Send + Sync,
   {
     let tx = self.notifier.clone();
     let mut rx = tx.lock().await.subscribe();
@@ -76,26 +80,23 @@ impl SubscribeEvents {
   }
 
   async fn start_watching(
-    notifier: Arc<tokio::sync::Mutex<tokio::sync::broadcast::Sender<Onvif_Ev_Msg>>>,
-    source: CameraNet
+    notifier: Arc<tokio::sync::Mutex<tokio::sync::broadcast::Sender<OnvifEvMsg>>>,
+    source: CameraNet,
   ) {
     tokio::spawn(async move {
       println!("doing stat watch");
       async fn do_authenitcate(camera: &CameraNet) -> (Client, PullMessages) {
-        let creds: Credentials = camera.credentials
-          .clone()
-          .expect("Need credentials for ONVIF event subscription");
+        let creds: Credentials = camera.credentials.clone().expect("Need credentials for ONVIF event subscription");
 
         let event_client = ClientBuilder::new(
-          &camera.ev_srv_url
+          &camera
+            .ev_srv_url
             .clone()
-            .expect(
-              "Could not find event service url, if using autoconfig then open a ticket or make a PR :)"
-            )
+            .expect("Could not find event service url, if using autoconfig then open a ticket or make a PR :)"),
         )
-          .credentials(Some(creds.clone()))
-          .auth_type(onvif::soap::client::AuthType::UsernameToken)
-          .build();
+        .credentials(Some(creds.clone()))
+        .auth_type(onvif::soap::client::AuthType::UsernameToken)
+        .build();
 
         let create_pull_sub_request = CreatePullPointSubscription {
           initial_termination_time: None,
@@ -107,10 +108,8 @@ impl SubscribeEvents {
           }),
           subscription_policy: None,
         };
-        let create_pull_puint_sub_response = event::create_pull_point_subscription(
-          &event_client,
-          &create_pull_sub_request
-        ).await;
+        let create_pull_puint_sub_response =
+          event::create_pull_point_subscription(&event_client, &create_pull_sub_request).await;
         let camera_sub = create_pull_puint_sub_response.unwrap();
 
         let uri: Url = Url::parse(&camera_sub.subscription_reference.address).unwrap();
@@ -144,10 +143,7 @@ impl SubscribeEvents {
 
         // Do check for pull messages
         println!("pulling ev");
-        let pull_messages_response = event::pull_messages(
-          &pull_msg_client,
-          &pull_messages_request
-        ).await;
+        let pull_messages_response = event::pull_messages(&pull_msg_client, &pull_messages_request).await;
         let msg = match pull_messages_response {
           Ok(msg) => msg,
           Err(e) => {
@@ -172,7 +168,7 @@ impl SubscribeEvents {
           if contains_any(&ev_name, &smart_substrings) {
             events.insert(
               "Smart_Event".to_string(),
-              nn.topic.inner_text.clone().split('/').last().unwrap().to_string()
+              nn.topic.inner_text.clone().split('/').last().unwrap().to_string(),
             );
           }
 
@@ -185,7 +181,7 @@ impl SubscribeEvents {
           }
 
           if events.len() > 0 {
-            let _ = notifier.lock().await.send(Onvif_Ev_Msg {
+            let _ = notifier.lock().await.send(OnvifEvMsg {
               src_uri: source.ev_srv_url.clone().unwrap().to_string(),
               topic: String::from(&nn.topic.inner_text),
               events,
@@ -258,7 +254,7 @@ pub async fn discover_onvif(username: String, password: String) -> Vec<CameraNet
             &ttr,
             &(onvif_utils::media::GetStreamUri {
               profile_token: onvif_utils::onvif::ReferenceToken(
-                profiles.as_ref().unwrap().profiles.first().unwrap().token.0.clone()
+                profiles.as_ref().unwrap().profiles.first().unwrap().token.0.clone(),
               ),
               stream_setup: onvif_utils::onvif::StreamSetup {
                 stream: onvif_utils::onvif::StreamType::RtpUnicast,
@@ -267,27 +263,25 @@ pub async fn discover_onvif(username: String, password: String) -> Vec<CameraNet
                   tunnel: vec![],
                 },
               },
-            })
-          ).await;
-          let stream_uri: String = stream_uri_response.expect(
-            "Could not get RTSP uri"
-          ).media_uri.uri;
-          let capabilities: Result<GotCapabilities, String> = match
-            onvif_utils::devicemgmt::get_capabilities(&ttr, &Default::default()).await
-          {
-            Ok(capabilities) => {
-              // capabilities.capabilities.media[0].x_addr;
-              let ev_addr = &capabilities.capabilities.events[0].x_addr;
+            }),
+          )
+          .await;
+          let stream_uri: String = stream_uri_response.expect("Could not get RTSP uri").media_uri.uri;
+          let capabilities: Result<GotCapabilities, String> =
+            match onvif_utils::devicemgmt::get_capabilities(&ttr, &Default::default()).await {
+              Ok(capabilities) => {
+                // capabilities.capabilities.media[0].x_addr;
+                let ev_addr = &capabilities.capabilities.events[0].x_addr;
 
-              Ok(GotCapabilities {
-                ev_srv: Url::parse(&ev_addr).map_err(|e| e.to_string()),
-              })
-            }
-            Err(error) => {
-              println!("Failed to fetch capabilities: {}", error);
-              Err(error.to_string())
-            }
-          };
+                Ok(GotCapabilities {
+                  ev_srv: Url::parse(&ev_addr).map_err(|e| e.to_string()),
+                })
+              }
+              Err(error) => {
+                println!("Failed to fetch capabilities: {}", error);
+                Err(error.to_string())
+              }
+            };
 
           match capabilities {
             Ok(got_cap) => {

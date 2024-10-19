@@ -36,7 +36,7 @@ export default function AlertsViewer() {
         }
       },
     );
-    const wsClient = new WebSocketClient('ws://127.0.0.1:8080/ws')
+    const wsClient = new WebSocketClient('ws://127.0.0.1:8080/api/user/ws')
     wsClient.on('Cam_Motion', ({topic}) => {
       // console.log('Received someEvent with body:', body);
       setAlerts([...alerts, topic])

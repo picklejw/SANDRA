@@ -21,12 +21,7 @@ impl RtspController {
           Ok(rec_body)
         } else {
           println!("Request failed with status: {}", response.status());
-          Err(
-            response
-              .text()
-              .await
-              .expect("Could not parse server response"),
-          )
+          Err(response.text().await.expect("Could not parse server response"))
         }
       }
       Err(e) => {
@@ -36,11 +31,7 @@ impl RtspController {
     }
   }
 
-  pub async fn get_remote_spd(
-    &self,
-    suuid: String,
-    body_fwd: SPDIncomming,
-  ) -> Result<String, String> {
+  pub async fn get_remote_spd(&self, suuid: String, body_fwd: SPDIncomming) -> Result<String, String> {
     match reqwest::Client::new()
       .post("http://127.0.0.1:8081/stream/receiver/".to_string() + &suuid) // TODO get port for service
       .form(&body_fwd)
@@ -53,12 +44,7 @@ impl RtspController {
           println!("Response str Body: {}", rec_body);
           Ok(rec_body)
         } else {
-          Err(
-            response
-              .text()
-              .await
-              .expect("Could not parse server response"),
-          )
+          Err(response.text().await.expect("Could not parse server response"))
         }
       }
       Err(e) => Err(e.to_string()),
@@ -73,15 +59,11 @@ pub struct WebRTCManager {
 impl WebRTCManager {
   pub fn new(port: &str) -> Self {
     let command = format!("HTTP_PORT='{}' ./bin/RTSPtoWebRTC", port);
-    let child = Command::new("sh")
-      .arg("-c")
-      .arg(&command)
-      .spawn()
-      .expect("Could not spawn webrtc process");
+    let child = Command::new("sh").arg("-c").arg(&command).spawn().expect("Could not spawn webrtc process");
 
     let child_arc_mutex = Arc::new(Mutex::new(child));
 
-    let mut inst = WebRTCManager {
+    let inst = WebRTCManager {
       rtsp_controller: Mutex::new(HashMap::new()),
     };
 
@@ -124,12 +106,7 @@ impl WebRTCManager {
           controllers_lock.insert(name, Arc::new(n_ctrlr));
           Ok(true)
         } else {
-          Err(
-            response
-              .text()
-              .await
-              .expect("Could not parse server error response"),
-          )
+          Err(response.text().await.expect("Could not parse server error response"))
         }
       }
       Err(e) => Err(e.to_string()),

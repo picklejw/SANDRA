@@ -1,29 +1,16 @@
-use crate::utils::models::WsMsg;
-use actix_web::{ rt, web, HttpRequest, HttpResponse };
+use crate::utils::models::{WsMsg, WsUser};
+use actix_web::{rt, web, HttpRequest, HttpResponse};
 use actix_ws::AggregatedMessage;
 use futures_util::StreamExt as _;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{ RwLock, mpsc };
-use serde::{ Deserialize, Serialize };
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct WsJSON {
-  pub ev: String,
-  pub msg: String,
-}
-
-#[derive(Clone)]
-pub struct WsUser {
-  username: String,
-  pub send_msg: tokio::sync::mpsc::Sender<std::string::String>,
-  gid: String,
-}
+use tokio::sync::{mpsc, RwLock};
 
 pub async fn ws_index(
   req: HttpRequest,
   stream: web::Payload,
-  clients: web::Data<Arc<RwLock<HashMap<String, WsUser>>>>
+  clients: web::Data<Arc<RwLock<HashMap<String, WsUser>>>>,
 ) -> Result<HttpResponse, actix_web::Error> {
   let (res, session, stream) = actix_ws::handle(&req, stream)?;
 

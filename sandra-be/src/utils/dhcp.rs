@@ -32,24 +32,19 @@ fn read_user_selection_for_interface() -> String {
   let mut interface_name = String::new();
   print!("Enter the interface name: ");
   io::stdout().flush().unwrap(); // Ensure the prompt is displayed
-  io::stdin()
-    .read_line(&mut interface_name)
-    .expect("Failed to read line");
+  io::stdin().read_line(&mut interface_name).expect("Failed to read line");
   return interface_name;
 }
 
 fn set_ip_to_interface(inteface_str: &str, ip_str: &str) {
   // Change the IP address using a system command
-  let output = Command::new("ip")
-    .args(&["addr", "add", &ip_str, "dev", &inteface_str])
-    .output();
+  let output = Command::new("ip").args(&["addr", "add", &ip_str, "dev", &inteface_str]).output();
 
   match output {
     Ok(output) => {
       if output.status.success() {
         println!("Successfully set IP address to {}", ip_str);
       } else {
-        // If the command failed, print the error output
         let stderr = String::from_utf8_lossy(&output.stderr);
         eprintln!("Command failed with error: {}", stderr);
       }
@@ -58,12 +53,6 @@ fn set_ip_to_interface(inteface_str: &str, ip_str: &str) {
       eprintln!("Failed to execute command: {}", e);
     }
   }
-
-  // // Check if the command was successful
-  // if output.status.success() {
-  // } else {
-  //   eprintln!("Failed to set IP address: {:?}", output);
-  // }
 }
 
 // DHCP Stuff
@@ -130,10 +119,7 @@ impl server::Handler for MyServer {
         }
         self.leases.insert(
           req_ip,
-          (
-            in_packet.chaddr,
-            Some(Instant::now().add(self.lease_duration)),
-          ),
+          (in_packet.chaddr, Some(Instant::now().add(self.lease_duration))),
         );
         println!("Sending Reply to Request");
         reply(server, options::MessageType::Ack, in_packet, &req_ip);
@@ -164,9 +150,7 @@ impl MyServer {
     pos >= IP_START_NUM
       && pos < IP_START_NUM + LEASE_NUM
       && (match self.leases.get(addr) {
-        Some((mac, expiry)) => {
-          *mac == *chaddr || expiry.map_or(true, |exp| Instant::now().gt(&exp))
-        }
+        Some((mac, expiry)) => *mac == *chaddr || expiry.map_or(true, |exp| Instant::now().gt(&exp)),
         None => true,
       })
   }
@@ -180,12 +164,7 @@ impl MyServer {
   }
 }
 
-fn reply(
-  s: &server::Server,
-  msg_type: options::MessageType,
-  req_packet: packet::Packet,
-  offer_ip: &Ipv4Addr,
-) {
+fn reply(s: &server::Server, msg_type: options::MessageType, req_packet: packet::Packet, offer_ip: &Ipv4Addr) {
   const LEASE_DURATION_SECS: u32 = 86400;
   const SUBNET_MASK: Ipv4Addr = Ipv4Addr::new(255, 255, 255, 0);
   const ROUTER_IP: Ipv4Addr = Ipv4Addr::new(10, 33, 32, 1);

@@ -1,11 +1,9 @@
 use mongodb::bson::oid::ObjectId;
 use onvif::soap::client::Credentials; //discovery::Device,
 
-use serde::{ Deserialize, Serialize };
-use std::{ collections::HashMap, fmt };
-use strum_macros::{ Display, EnumString };
+use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, fmt};
 use url::Url;
-use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
@@ -42,18 +40,15 @@ pub struct Group {
 
 #[derive(Clone)]
 pub struct CameraNet {
-  // pub url: Url,
   pub name: String,
   pub dev_srv_url: Result<Url, String>,
   pub ev_srv_url: Result<Url, String>,
   pub media_urls: Result<String, String>,
   pub credentials: Option<Credentials>,
-  // pub addr: String,
-  // pub port: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub struct Onvif_Ev_Msg {
+pub struct OnvifEvMsg {
   pub src_uri: String,
   pub topic: String,
   pub events: HashMap<String, String>,
@@ -75,4 +70,17 @@ pub struct SPDIncomming {
 pub struct AddCameraFeedParam {
   pub url: String,
   pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct WsJSON {
+  pub ev: String,
+  pub msg: String,
+}
+
+#[derive(Clone)]
+pub struct WsUser {
+  pub username: String,
+  pub send_msg: tokio::sync::mpsc::Sender<std::string::String>,
+  pub gid: String,
 }

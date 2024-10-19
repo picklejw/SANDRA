@@ -1,13 +1,10 @@
-use super::models::Camera;
-use crate::utils::models::{AccessLevel, Group, User};
+use crate::utils::models::{AccessLevel, Camera, Group, User};
 use futures::stream::TryStreamExt;
 use mongodb::{
   bson::{doc, oid::ObjectId, to_document},
-  options::{FindOneAndUpdateOptions, IndexOptions, ReturnDocument},
+  options::{IndexOptions, ReturnDocument},
   Client, Collection, IndexModel,
 };
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::ops::Deref;
 
 #[derive(Clone)]
@@ -21,35 +18,18 @@ static GROUP_COLLECTION: &str = "groups";
 
 impl DBService {
   pub async fn init() -> Self {
-    let uri = "mongodb://root:example@localhost:27017";
-    let client = Some(
-      Client::with_uri_str(uri)
-        .await
-        .expect("Could not connect to database"),
-    );
+    let uri = std::env::var("DB_URI").unwrap_or("mongodb://root:example@localhost:27017".to_string());
+    let client = Some(Client::with_uri_str(uri).await.expect("Could not connect to database"));
 
     let sandra_db = client.unwrap().database("sandra");
     let user_collection = sandra_db.collection(USER_COLLECTION);
     let group_collection = sandra_db.collection(GROUP_COLLECTION);
 
-    if user_collection
-      .count_documents(doc! {})
-      .await
-      .expect("Could not get doc count")
-      == 0
-    {
-      // Define the unique index on "username" field
+    if user_collection.count_documents(doc! {}).await.expect("Could not get doc count") == 0 {
       let index_options = IndexOptions::builder().unique(true).build();
-      let index_model = IndexModel::builder()
-        .keys(doc! { "username": 1 })
-        .options(index_options)
-        .build();
+      let index_model = IndexModel::builder().keys(doc! { "username": 1 }).options(index_options).build();
 
-      // Create the index on "username" field
-      user_collection
-        .create_index(index_model)
-        .await
-        .expect("Could not create unique index for users");
+      user_collection.create_index(index_model).await.expect("Could not create unique index for users");
     }
 
     DBService {
@@ -78,11 +58,7 @@ impl DBService {
           group_data: group,
           access_level: Some(AccessLevel::Admin),
         };
-        self
-          .user_collection
-          .insert_one(n_user)
-          .await
-          .expect("Could not create new user");
+        self.user_collection.insert_one(n_user).await.expect("Could not create new user");
         Ok(true)
       }
       None => {
@@ -98,26 +74,14 @@ impl DBService {
           group_data: Some(n_group.clone()),
           access_level: Some(AccessLevel::Admin),
         };
-        self
-          .group_collection
-          .insert_one(n_group)
-          .await
-          .expect("Could not create new group");
-        self
-          .user_collection
-          .insert_one(n_user)
-          .await
-          .expect("Could not create new user");
+        self.group_collection.insert_one(n_group).await.expect("Could not create new group");
+        self.user_collection.insert_one(n_user).await.expect("Could not create new user");
         Ok(true)
       }
     }
   }
 
-  pub async fn check_login(
-    &self,
-    username: Option<String>,
-    password: Option<String>,
-  ) -> Option<User> {
+  pub async fn check_login(&self, username: Option<String>, password: Option<String>) -> Option<User> {
     let mut user = self
       .user_collection
       .find_one(doc! { "username": username.unwrap(), "password": password.unwrap() })
