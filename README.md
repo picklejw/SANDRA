@@ -11,5 +11,5 @@ PR to support ONVIF to have work with Reolink 510a:
 https://github.com/lumeohq/onvif-rs/pull/128
 
 
-** It's a little difficult to spot with contrast see object identification at bottom of gif
+** It's a little difficult to spot with contrast see object identification at bottom of gif. These events come from the cameras themselves I have no control over errors in identification but to be able to get notifications and process them on larger hardware like a GPU. Saves money on the home electric bill and with AI models being run on home servers it also saves some processing room for those actions.
 ![Kapture 2024-10-18 at 07 40 40](https://github.com/user-attachments/assets/1b9fe2b9-3ee5-4e6d-a7ef-987d6c80cfcb)
